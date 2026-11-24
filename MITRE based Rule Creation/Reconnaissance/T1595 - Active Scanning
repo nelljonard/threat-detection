@@ -1,0 +1,788 @@
+ 🕵️ Detection Rules: MITRE ATT&CK T1595 - Active Scanning
+
+## Overview
+
+**T1595 (Active Scanning)** is a **Reconnaissance** technique where adversaries actively scan victim IP blocks, ports, and services to gather information about target infrastructure before launching attacks. This includes scanning for live hosts, open ports, running services, vulnerabilities, and network topology.
+
+### MITRE ATT&CK Context
+- **Tactic**: Reconnaissance (TA0043)
+- **Primary Goal**: Gather intelligence on target networks and systems
+- **Secondary Goals**: 
+  - Identify active hosts and network segments
+  - Discover open ports and services
+  - Map network topology and infrastructure
+  - Find vulnerabilities for exploitation
+
+### Official MITRE ATT&CK v20 Sub-Techniques
+
+According to **official MITRE ATT&CK v20**, T1595 has **only 3 sub-techniques**:
+
+| ID | Name | Description |
+|----|------|-------------|
+| T1595.001 | Scan IP Blocks | Scanning victim IP blocks to gather information |
+| T1595.002 | Vulnerability Scan | Scanning for vulnerabilities in host configurations |
+| T1595.003 | Port Scan | Identifying open ports and services on targets |
+
+---
+
+## 🔍 Detection Rules by Sub-Technique
+
+### 1. Scan IP Blocks (T1595.001)
+**Indicators:** Network scanning tools, mass port sweeps, IP range enumeration
+
+#### Rule: IP Block Scanning Detected
+
+```yaml
+name: "IP Block Scanning"
+severity: High
+description: 
+  Threat: Attackers scan victim IP blocks to gather information about active hosts and network topology. This reconnaissance helps identify targets for further exploitation.
+  
+  Detection: This rule monitors for network scanning activity using tools like nmap, masscan, or zmap that target multiple IP addresses simultaneously.
+
+conditions:
+  - command: nmap OR masscan OR zmap
+  - network_destination_count: greater_than_50
+  - scan_type: IP_RANGE OR SUBNET
+alert_message: "IP block scanning detected from {{source_ip}} targeting {{target_range}}"
+mitre-technique-id: T1595.001
+mitre-tactic: Reconnaissance
+
+lucene-query: |
+  (command: nmap OR command: masscan OR command: zmap) AND network_destination_count > 50
+  # Note: Field names may vary by SIEM schema (e.g., Command, NetworkDestinationCount)
+```
+
+**Rule Title:** T1595.001: IP Block Scanning Activity Detected
+
+**Threat Detected:** Reconnaissance via Network Mapping - Attackers scan IP blocks to identify active hosts and network boundaries for targeted attacks.
+
+**Default Severity:** **High**
+- *Justification:* Large-scale scanning indicates systematic reconnaissance efforts typical of organized threat actors preparing for exploitation.
+
+---
+
+#### Rule: Port Scanning Activity (T1595.001)
+
+```yaml
+name: "Port Scanning Detected"
+severity: High
+description: 
+  Threat: Attackers scan ports to identify open services and potential entry points for exploitation.
+  
+  Detection: This rule monitors for port scanning activity using nmap, masscan, or manual telnet/nc probes.
+
+conditions:
+  - command: nmap OR masscan OR nc
+  - target_port_count: greater_than_10
+alert_message: "Port scanning detected targeting {{target_host}} ports {{port_range}}"
+mitre-technique-id: T1595.001
+mitre-tactic: Reconnaissance
+
+lucene-query: |
+  (command: nmap OR command: masscan) AND target_port_count > 10
+  # Note: Field names may vary by SIEM schema (e.g., Command, TargetPortCount)
+```
+
+**Rule Title:** T1595.001: Port Scanning Activity Detected
+
+**Threat Detected:** Reconnaissance via Service Discovery - Attackers identify open ports to find potential attack vectors.
+
+**Default Severity:** **High**
+- *Justification:* Systematic port scanning is a fundamental reconnaissance technique used by attackers before exploitation.
+
+---
+
+#### Rule: Service Enumeration Activity (T1595.001)
+
+```yaml
+name: "Service Enumeration Detected"
+severity: Medium
+description: 
+  Threat: Attackers enumerate services to identify running applications and their versions for targeted exploitation.
+  
+  Detection: This rule detects service enumeration tools like enum4linux, rpcclient, or smbclient.
+
+conditions:
+  - command: enum4linux OR rpcclient OR smbclient
+  - target_service: SMB OR RPC OR NETBIOS
+alert_message: "Service enumeration detected targeting {{target_host}}"
+mitre-technique-id: T1595.001
+mitre-tactic: Reconnaissance
+
+lucene-query: |
+  command: (enum4linux OR rpcclient OR smbclient) AND target_service: (SMB OR RPC OR NETBIOS)
+  # Note: Field names may vary by SIEM schema (e.g., Command, TargetService)
+```
+
+**Rule Title:** T1595.001: Service Enumeration Activity Detected
+
+**Threat Detected:** Reconnaissance via Service Discovery - Attackers identify available services for exploitation.
+
+**Default Severity:** **Medium**
+- *Justification:* Service enumeration is common reconnaissance but may also be used by legitimate administrators.
+
+---
+
+#### Rule: Banner Grabbing Activity (T1595.001)
+
+```yaml
+name: "Banner Grabbing Detected"
+severity: Medium
+description: 
+  Threat: Attackers grab service banners to identify software types and versions for targeted attacks.
+  
+  Detection: This rule monitors for banner grabbing using curl, wget, or netcat with verbose output.
+
+conditions:
+  - command: curl OR wget OR nc
+  - flag_contains: "-v" OR "--verbose" OR "--spider"
+alert_message: "Banner grabbing detected from {{source_ip}} targeting {{target_host}}"
+mitre-technique-id: T1595.001
+mitre-tactic: Reconnaissance
+
+lucene-query: |
+  (command: curl OR command: wget) AND flag_contains: (*-v* OR *--verbose*)
+  # Note: Field names may vary by SIEM schema (e.g., Command, FlagContains)
+```
+
+**Rule Title:** T1595.001: Banner Grabbing Activity Detected
+
+**Threat Detected:** Reconnaissance via Service Identification - Attackers identify service versions for vulnerability targeting.
+
+**Default Severity:** **Medium**
+- *Justification:* Banner grabbing is common reconnaissance but may be used by legitimate administrators.
+
+---
+
+#### Rule: DNS Enumeration Activity (T1595.001)
+
+```yaml
+name: "DNS Enumeration Detected"
+severity: Medium
+description: 
+  Threat: Attackers enumerate DNS records to discover domain infrastructure and potential targets.
+  
+  Detection: This rule monitors for DNS enumeration tools like dig, nslookup, or dnsrecon.
+
+conditions:
+  - command: dig OR nslookup OR host
+  - query_type: AXFR OR ANY OR TXT
+alert_message: "DNS enumeration detected from {{source_ip}} targeting {{target_domain}}"
+mitre-technique-id: T1595.001
+mitre-tactic: Reconnaissance
+
+lucene-query: |
+  command: (dig OR nslookup OR host) AND query_type: (AXFR OR ANY OR TXT)
+  # Note: Field names may vary by SIEM schema (e.g., Command, QueryType)
+```
+
+**Rule Title:** T1595.001: DNS Enumeration Activity Detected
+
+**Threat Detected:** Reconnaissance via Domain Discovery - Attackers map domain infrastructure for targeting.
+
+**Default Severity:** **Medium**
+- *Justification:* DNS enumeration is common reconnaissance but may be used by legitimate administrators.
+
+---
+
+#### Rule: Subdomain Enumeration Activity (T1595.001)
+
+```yaml
+name: "Subdomain Enumeration Detected"
+severity: Medium
+description: 
+  Threat: Attackers enumerate subdomains to discover additional targets and infrastructure.
+  
+  Detection: This rule monitors for subdomain enumeration tools like sublist3r, theHarvester, or amass.
+
+conditions:
+  - command: sublist3r OR theHarvester OR amass
+  - target_type: SUBDOMAIN
+alert_message: "Subdomain enumeration detected from {{source_ip}} targeting {{target_domain}}"
+mitre-technique-id: T1595.001
+mitre-tactic: Reconnaissance
+
+lucene-query: |
+  command: (sublist3r OR theHarvester OR amass) AND target_type: SUBDOMAIN
+  # Note: Field names may vary by SIEM schema (e.g., Command, TargetType)
+```
+
+**Rule Title:** T1595.001: Subdomain Enumeration Activity Detected
+
+**Threat Detected:** Reconnaissance via Domain Expansion - Attackers discover additional targets through subdomains.
+
+**Default Severity:** **Medium**
+- *Justification:* Subdomain enumeration is common reconnaissance but may be used by legitimate administrators.
+
+---
+
+#### Rule: ARP Scanning Activity (T1595.001)
+
+```yaml
+name: "ARP Scanning Detected"
+severity: High
+description: 
+  Threat: Attackers scan local networks using ARP to discover all active hosts on the segment.
+  
+  Detection: This rule monitors for ARP scanning tools like arp-scan or nmap with ARP protocol.
+
+conditions:
+  - command: arp-scan OR nmap
+  - scan_protocol: ARP
+alert_message: "ARP scanning detected from {{source_ip}} on network segment"
+mitre-technique-id: T1595.001
+mitre-tactic: Reconnaissance
+
+lucene-query: |
+  (command: arp-scan OR command: nmap) AND scan_protocol: ARP
+  # Note: Field names may vary by SIEM schema (e.g., Command, ScanProtocol)
+```
+
+**Rule Title:** T1595.001: ARP Scanning Activity Detected
+
+**Threat Detected:** Reconnaissance via Local Network Mapping - Attackers discover all hosts on local network segments.
+
+**Default Severity:** **High**
+- *Justification:* ARP scanning indicates attackers have achieved some level of network access and are mapping the environment.
+
+---
+
+#### Rule: ICMP Ping Sweep Activity (T1595.001)
+
+```yaml
+name: "ICMP Ping Sweep Detected"
+severity: Medium
+description: 
+  Threat: Attackers use ICMP pings to identify live hosts on target networks.
+  
+  Detection: This rule monitors for ping sweep commands using fping, nmap, or continuous ping floods.
+
+conditions:
+  - command: ping OR fping
+  - flag_contains: "-f" OR "--all"
+alert_message: "ICMP ping sweep detected from {{source_ip}} targeting {{target_range}}"
+mitre-technique-id: T1595.001
+mitre-tactic: Reconnaissance
+
+lucene-query: |
+  command: (ping OR fping) AND flag_contains: (*-f* OR *--all*)
+  # Note: Field names may vary by SIEM schema (e.g., Command, FlagContains)
+```
+
+**Rule Title:** T1595.001: ICMP Ping Sweep Activity Detected
+
+**Threat Detected:** Reconnaissance via Host Discovery - Attackers identify active hosts using ICMP responses.
+
+**Default Severity:** **Medium**
+- *Justification:* Ping sweeps are common reconnaissance but may be used by legitimate administrators.
+
+---
+
+#### Rule: SSH Banner Grabbing Activity (T1595.001)
+
+```yaml
+name: "SSH Banner Grabbing Detected"
+severity: Medium
+description: 
+  Threat: Attackers probe SSH banners to identify server versions and configurations.
+  
+  Detection: This rule monitors for SSH banner grabbing using ssh -v, telnet, or netcat connections.
+
+conditions:
+  - command: ssh OR nc
+  - target_port: 22
+  - flag_contains: "-v" OR "--verbose"
+alert_message: "SSH banner grabbing detected from {{source_ip}} targeting {{target_host}}"
+mitre-technique-id: T1595.001
+mitre-tactic: Reconnaissance
+
+lucene-query: |
+  (command: ssh OR command: nc) AND target_port: 22 AND flag_contains: (*-v* OR *--verbose*)
+  # Note: Field names may vary by SIEM schema (e.g., Command, TargetPort, FlagContains)
+```
+
+**Rule Title:** T1595.001: SSH Banner Grabbing Activity Detected
+
+**Threat Detected:** Reconnaissance via Service Identification - Attackers identify SSH server versions for exploitation.
+
+**Default Severity:** **Medium**
+- *Justification:* SSH banner grabbing is common reconnaissance but may be used by legitimate administrators.
+
+---
+
+#### Rule: SMB Enumeration Activity (T1595.001)
+
+```yaml
+name: "SMB Enumeration Detected"
+severity: High
+description: 
+  Threat: Attackers enumerate SMB shares and users to identify potential entry points.
+  
+  Detection: This rule monitors for SMB enumeration tools like enum4linux, rpcclient, or net view commands.
+
+conditions:
+  - command: enum4linux OR rpcclient OR smbclient
+  - target_protocol: SMB OR NETBIOS
+alert_message: "SMB enumeration detected from {{source_ip}} targeting {{target_host}}"
+mitre-technique-id: T1595.001
+mitre-tactic: Reconnaissance
+
+lucene-query: |
+  command: (enum4linux OR rpcclient OR smbclient) AND target_protocol: SMB
+  # Note: Field names may vary by SIEM schema (e.g., Command, TargetProtocol)
+```
+
+**Rule Title:** T1595.001: SMB Enumeration Activity Detected
+
+**Threat Detected:** Reconnaissance via Network Share Discovery - Attackers identify shared resources for exploitation.
+
+**Default Severity:** **High**
+- *Justification:* SMB enumeration indicates attackers are probing Windows network shares for access opportunities.
+
+---
+
+#### Rule: HTTP Probing Activity (T1595.001)
+
+```yaml
+name: "HTTP Probing Detected"
+severity: Medium
+description: 
+  Threat: Attackers probe web servers to identify applications and potential vulnerabilities.
+  
+  Detection: This rule monitors for HTTP probing using curl -I, wget --spider, or nikto scans.
+
+conditions:
+  - command: curl OR wget OR nikto
+  - flag_contains: "-I" OR "--head" OR "--spider"
+alert_message: "HTTP probing detected from {{source_ip}} targeting {{target_host}}"
+mitre-technique-id: T1595.001
+mitre-tactic: Reconnaissance
+
+lucene-query: |
+  command: (curl OR wget OR nikto) AND flag_contains: (*-I* OR *--head*)
+  # Note: Field names may vary by SIEM schema (e.g., Command, FlagContains)
+```
+
+**Rule Title:** T1595.001: HTTP Probing Activity Detected
+
+**Threat Detected:** Reconnaissance via Web Application Discovery - Attackers identify web applications for exploitation.
+
+**Default Severity:** **Medium**
+- *Justification:* HTTP probing is common reconnaissance but may be used by legitimate administrators.
+
+---
+
+### 2. Vulnerability Scan (T1595.002)
+**Indicators:** Vulnerability scanner tools, CVE scanning, security assessment activity
+
+#### Rule: Vulnerability Scanning Activity Detected
+
+```yaml
+name: "Vulnerability Scanner Detected"
+severity: High
+description: 
+  Threat: Attackers use vulnerability scanners to identify security weaknesses in target systems before exploitation.
+  
+  Detection: This rule detects known vulnerability scanning tools and their characteristic command-line patterns.
+
+conditions:
+  - process_name: nessus OR openvas OR qualys
+  - command_contains: "vuln" OR "scan" OR "check"
+alert_message: "Vulnerability scanning activity detected from {{source_ip}}"
+mitre-technique-id: T1595.002
+mitre-tactic: Reconnaissance
+
+lucene-query: |
+  process_name: (nessus OR openvas OR qualys) AND command_line: (*vuln* OR *scan* OR *check*)
+  # Note: Field names may vary by SIEM schema (e.g., ProcessName, CommandLine)
+```
+
+**Rule Title:** T1595.002: Vulnerability Scanning Activity Detected
+
+**Threat Detected:** Reconnaissance via Vulnerability Assessment - Attackers identify exploitable vulnerabilities for later exploitation.
+
+**Default Severity:** **High**
+- *Justification:* Professional vulnerability scanning indicates sophisticated threat actors conducting thorough reconnaissance.
+
+---
+
+#### Rule: Database Port Scanning Activity (T1595.002)
+
+```yaml
+name: "Database Port Scanning Detected"
+severity: High
+description: 
+  Threat: Attackers scan database ports to identify exposed databases for exploitation.
+  
+  Detection: This rule monitors for database-specific scanning targeting common port ranges (1433, 1521, 3306, 5432).
+
+conditions:
+  - command: nmap OR masscan
+  - target_port_range: 1433-1521 OR 3306-5432
+alert_message: "Database port scanning detected from {{source_ip}} targeting {{target_host}}"
+mitre-technique-id: T1595.002
+mitre-tactic: Reconnaissance
+
+lucene-query: |
+  command: (nmap OR masscan) AND target_port_range: (1433-1521 OR 3306-5432)
+  # Note: Field names may vary by SIEM schema (e.g., Command, TargetPortRange)
+```
+
+**Rule Title:** T1595.002: Database Port Scanning Activity Detected
+
+**Threat Detected:** Reconnaissance via Database Discovery - Attackers identify exposed databases for data access or exploitation.
+
+**Default Severity:** **High**
+- *Justification:* Database scanning indicates attackers are specifically targeting data storage systems.
+
+---
+
+#### Rule: SSL/TLS Fingerprinting Activity (T1595.002)
+
+```yaml
+name: "SSL/TLS Fingerprinting Detected"
+severity: Medium
+description: 
+  Threat: Attackers fingerprint SSL/TLS configurations to identify vulnerabilities.
+  
+  Detection: This rule monitors for SSL scanning tools like sslscan, testssl.sh, or nmap SSL scripts.
+
+conditions:
+  - command: sslscan OR testssl.sh
+  - target_protocol: TLS OR SSL
+alert_message: "SSL/TLS fingerprinting detected from {{source_ip}} targeting {{target_host}}"
+mitre-technique-id: T1595.002
+mitre-tactic: Reconnaissance
+
+lucene-query: |
+  command: (sslscan OR testssl.sh) AND target_protocol: TLS
+  # Note: Field names may vary by SIEM schema (e.g., Command, TargetProtocol)
+```
+
+**Rule Title:** T1595.002: SSL/TLS Fingerprinting Activity Detected
+
+**Threat Detected:** Reconnaissance via Cryptographic Analysis - Attackers identify SSL/TLS vulnerabilities for exploitation.
+
+**Default Severity:** **Medium**
+- *Justification:* SSL fingerprinting is common reconnaissance but may be used by legitimate administrators.
+
+---
+
+#### Rule: DNS Zone Transfer Attempt (T1595.002)
+
+```yaml
+name: "DNS Zone Transfer Attempt"
+severity: Critical
+description: 
+  Threat: Attackers attempt DNS zone transfers to obtain complete domain infrastructure information.
+  
+  Detection: This rule monitors for AXFR queries or zone transfer requests to authoritative DNS servers.
+
+conditions:
+  - command: dig OR host
+  - query_type: AXFR
+alert_message: "DNS zone transfer attempt detected from {{source_ip}} targeting {{target_domain}}"
+mitre-technique-id: T1595.002
+mitre-tactic: Reconnaissance
+
+lucene-query: |
+  command: (dig OR host) AND query_type: AXFR
+  # Note: Field names may vary by SIEM schema (e.g., Command, QueryType)
+```
+
+**Rule Title:** T1595.002: DNS Zone Transfer Attempt Detected
+
+**Threat Detected:** Reconnaissance via Complete Domain Mapping - Attackers obtain full domain infrastructure for targeting.
+
+**Default Severity:** **Critical**
+- *Justification:* Zone transfer attempts indicate sophisticated reconnaissance with potential for complete network mapping.
+
+---
+
+#### Rule: NTP Enumeration Activity (T1595.002)
+
+```yaml
+name: "NTP Enumeration Detected"
+severity: Low
+description: 
+  Threat: Attackers enumerate NTP servers to identify time synchronization infrastructure.
+  
+  Detection: This rule monitors for NTP enumeration using ntpq or ntpdate commands.
+
+conditions:
+  - command: ntpq OR ntpdate
+  - target_service: NTP
+alert_message: "NTP enumeration detected from {{source_ip}} targeting {{target_host}}"
+mitre-technique-id: T1595.002
+mitre-tactic: Reconnaissance
+
+lucene-query: |
+  command: (ntpq OR ntpdate) AND target_service: NTP
+  # Note: Field names may vary by SIEM schema (e.g., Command, TargetService)
+```
+
+**Rule Title:** T1595.002: NTP Enumeration Activity Detected
+
+**Threat Detected:** Reconnaissance via Infrastructure Discovery - Attackers identify time synchronization servers.
+
+**Default Severity:** **Low**
+- *Justification:* NTP enumeration is less common and may be used by legitimate administrators for troubleshooting.
+
+---
+
+#### Rule: SNMP Enumeration Activity (T1595.002)
+
+```yaml
+name: "SNMP Enumeration Detected"
+severity: Medium
+description: 
+  Threat: Attackers enumerate SNMP devices to identify network infrastructure and configurations.
+  
+  Detection: This rule monitors for SNMP scanning using snmpwalk or snmpget commands.
+
+conditions:
+  - command: snmpwalk OR snmpget
+  - target_service: SNMP
+alert_message: "SNMP enumeration detected from {{source_ip}} targeting {{target_host}}"
+mitre-technique-id: T1595.002
+mitre-tactic: Reconnaissance
+
+lucene-query: |
+  command: (snmpwalk OR snmpget) AND target_service: SNMP
+  # Note: Field names may vary by SIEM schema (e.g., Command, TargetService)
+```
+
+**Rule Title:** T1595.002: SNMP Enumeration Activity Detected
+
+**Threat Detected:** Reconnaissance via Network Device Discovery - Attackers identify network devices for exploitation.
+
+**Default Severity:** **Medium**
+- *Justification:* SNMP enumeration is common reconnaissance but may be used by legitimate administrators.
+
+---
+
+#### Rule: LDAP Enumeration Activity (T1595.002)
+
+```yaml
+name: "LDAP Enumeration Detected"
+severity: High
+description: 
+  Threat: Attackers enumerate LDAP directories to identify user accounts and group memberships.
+  
+  Detection: This rule monitors for LDAP enumeration using ldapsearch or ldapwhoami commands.
+
+conditions:
+  - command: ldapsearch OR ldapwhoami
+  - target_service: LDAP
+alert_message: "LDAP enumeration detected from {{source_ip}} targeting {{target_host}}"
+mitre-technique-id: T1595.002
+mitre-tactic: Reconnaissance
+
+lucene-query: |
+  command: (ldapsearch OR ldapwhoami) AND target_service: LDAP
+  # Note: Field names may vary by SIEM schema (e.g., Command, TargetService)
+```
+
+**Rule Title:** T1595.002: LDAP Enumeration Activity Detected
+
+**Threat Detected:** Reconnaissance via User Discovery - Attackers identify user accounts for credential attacks.
+
+**Default Severity:** **High**
+- *Justification:* LDAP enumeration indicates attackers are probing directory services for account information.
+
+---
+
+#### Rule: Redis Information Disclosure (T1595.002)
+
+```yaml
+name: "Redis Information Disclosure Detected"
+severity: High
+description: 
+  Threat: Attackers probe exposed Redis instances to identify configurations and data.
+  
+  Detection: This rule monitors for Redis probing using redis-cli ping or info commands.
+
+conditions:
+  - command: redis-cli
+  - flag_contains: "ping" OR "info" OR "keys *"
+alert_message: "Redis information disclosure detected from {{source_ip}} targeting {{target_host}}"
+mitre-technique-id: T1595.002
+mitre-tactic: Reconnaissance
+
+lucene-query: |
+  command: redis-cli AND flag_contains: (*ping* OR *info*)
+  # Note: Field names may vary by SIEM schema (e.g., Command, FlagContains)
+```
+
+**Rule Title:** T1595.002: Redis Information Disclosure Detected
+
+**Threat Detected:** Reconnaissance via Database Discovery - Attackers identify exposed Redis instances for exploitation.
+
+**Default Severity:** **High**
+- *Justification:* Redis probing indicates attackers found an exposed database service vulnerable to access.
+
+---
+
+#### Rule: MongoDB Information Disclosure (T1595.002)
+
+```yaml
+name: "MongoDB Information Disclosure Detected"
+severity: High
+description: 
+  Threat: Attackers probe exposed MongoDB instances to identify databases and configurations.
+  
+  Detection: This rule monitors for MongoDB probing using mongosh or mongo commands.
+
+conditions:
+  - command: mongosh OR mongo
+  - flag_contains: "eval" OR "db." OR "--host"
+alert_message: "MongoDB information disclosure detected from {{source_ip}} targeting {{target_host}}"
+mitre-technique-id: T1595.002
+mitre-tactic: Reconnaissance
+
+lucene-query: |
+  command: (mongosh OR mongo) AND flag_contains: (*eval* OR *db.*)
+  # Note: Field names may vary by SIEM schema (e.g., Command, FlagContains)
+```
+
+**Rule Title:** T1595.002: MongoDB Information Disclosure Detected
+
+**Threat Detected:** Reconnaissance via Database Discovery - Attackers identify exposed MongoDB instances for data access.
+
+**Default Severity:** **High**
+- *Justification:* MongoDB probing indicates attackers found an exposed NoSQL database vulnerable to access.
+
+---
+
+## 📊 Detection Logic Templates
+
+### SIEM Query Examples (Splunk SPL)
+
+#### Network Scanning Activity Detection
+```splunk
+index=network 
+src_ip NOT IN [list of authorized_scanners]
+AND (command: nmap OR command: masscan)
+| stats count by src_ip, dest_ip
+| where count > 10
+```
+
+#### Port Scan Detection
+```splunk
+index=firewall 
+action="DENY" 
+AND port_scan_detected=true
+| stats count by src_ip, dest_port
+| where count > 5
+```
+
+#### DNS Zone Transfer Attempts
+```splunk
+index=dns 
+query_type="AXFR"
+AND client_ip NOT IN [list of authorized_dns_admins]
+| stats count by client_ip, domain_name
+```
+
+### Sigma Rules (Generic SIEM Format)
+
+#### Nmap Scanning Detection
+```json
+{
+  "title": "Nmap Network Scanning Detected",
+  "id": "t1595-001-nmap-scan",
+  "status": "experimental",
+  "description": "Detects nmap network scanning activity",
+  "logsource": {
+    "category": ["network-traffic", "process-execution"],
+    "product": "windows,linux"
+  },
+  "detection": {
+    "selection": "\"nmap\" AND (target_count > 50 OR port_scan)",
+    "filter": "user NOT IN [authorized_network_admins]"
+  }
+}
+```
+
+#### Port Scanning Detection
+```json
+{
+  "title": "Port Scanning Activity Detected",
+  "id": "t1595-003-port-scan",
+  "status": "experimental",
+  "description": "Detects port scanning activity targeting multiple ports",
+  "logsource": {
+    "category": ["network-traffic"],
+    "product": "windows,linux"
+  },
+  "detection": {
+    "selection": "\"nmap\" AND \"-p\" AND target_port_count > 10",
+    "filter": "user NOT IN [authorized_network_admins]"
+  }
+}
+```
+
+---
+
+## 🎯 Response Actions & Mitigation
+
+### Immediate Actions (Automated)
+1. **Block source IP** at firewall immediately for aggressive scanners
+2. **Enable enhanced logging** on targeted systems
+3. **Alert security operations center** for investigation
+4. **Review authorized scanner lists** to ensure legitimate activity isn't blocked
+
+### Investigation Steps
+1. Identify the scope of scanning (which IPs, ports, services)
+2. Determine if this is reconnaissance before an attack or authorized testing
+3. Check for follow-up exploitation attempts
+4. Review network topology maps and asset inventories
+5. Correlate with other reconnaissance techniques
+
+### Long-term Mitigation
+- Implement **network segmentation** to limit scanning scope
+- Deploy **honeypots** to detect scanning activity early
+- Use **allow-listing** for authorized scanning tools
+- Enable **IDS/IPS rules** for known scanning signatures
+- Regularly update **authorized scanner whitelists**
+
+---
+
+## 📈 Metrics & KPIs
+
+| Metric | Threshold | Action |
+|--------|-----------|--------|
+| External port scans/hour | > 50 | Alert |
+| Internal network scans/day | Any | Investigate |
+| DNS zone transfer attempts/week | Any | Block source IP |
+| Database port scans/month | > 10 | Review firewall rules |
+
+---
+
+## 🔗 Related MITRE Techniques
+
+- **T1592** - Active Scanning (related reconnaissance)
+- **T1593** - Passive Network Scanning (alternative to active scanning)
+- **T1594** - Discovery from Victim Network (follow-up after scanning)
+- **T1082** - System Information (gathering info after discovery)
+
+---
+
+## 📝 Rule Maintenance Notes
+
+### Regular Updates Required
+- Update authorized scanner lists as teams change
+- Add new scanning tools to detection rules
+- Monitor for evasion techniques specific to your environment
+- Review false positive rates quarterly
+
+### Integration Points
+- SIEM platforms: Splunk, ELK, Azure Sentinel, QRadar
+- Network monitoring: Suricata, Zeek, Snort
+- Firewall logs: Palo Alto, Cisco ASA, Fortinet
+- IDS/IPS: Snort, Suricata, Elastic Security
+
+---
+
+*Last Updated: October 31, 2026 | MITRE ATT&CK T1595 Detection Rules*
